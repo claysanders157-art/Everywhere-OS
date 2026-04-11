@@ -22,7 +22,8 @@ jobs:
             nasm \
             qemu-system-x86 \
             grub-pc-bin \
-            xorriso
+            xorriso \
+            mtools
 
       - name: Build
         run: make
