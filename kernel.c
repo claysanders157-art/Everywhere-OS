@@ -12,7 +12,7 @@ Abstract:
 Author:
 
     Noah Juopperi <nipfswd@gmail.com>
-    Clay Sanders (made og kernel) <claylikepython@yahoo.com>
+    Clay Sanders (made first kernel) <claylikepython@yahoo.com>
 Environment:
 
     Text-mode VGA, PC keyboard controller.
@@ -1382,7 +1382,7 @@ ProcessCommand (
     }
 
     if (StrICmp(CommandLower, "credits") == 0) {
-        Print("Made by Clay Sanders\n");
+        Print("Main Developer Clay Sanders, Co Developer Noah Juopperi\n");
         return;
     }
 
