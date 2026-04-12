@@ -388,7 +388,7 @@ ProcessCommand (
     }
 
     if (StrICmp(CommandLower, "credits") == 0) {
-        Print("Made by Clay Sanders\n");
+        Print("Main Developer Clay Sanders, Co Developer Noah Juopperi\n");
         return;
     }
 

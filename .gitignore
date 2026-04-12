@@ -9,3 +9,6 @@ build/
 dist/
 # grub.cfg is automatically created in the preferred directory when make is ran
 iso/
+
+## IDEs
+.vscode/

@@ -23,6 +23,10 @@ Environment:
 #include "inc/video.h"
 #include "inc/io.h"
 
+#define VGA_WIDTH  80
+#define VGA_HEIGHT 25
+#define VGA_SIZE   (VGA_WIDTH * VGA_HEIGHT * 2)
+
 volatile char* VIDEO_BUF = (volatile char*)0xb8000;
 int            cursor_pos = 0;
 
@@ -30,15 +34,38 @@ int            cursor_pos = 0;
 
 Routine Description:
 
+    Scrolls the screen up by one line.
+
+--*/
+
+VOID
+Scroll (
+    VOID
+    )
+{
+    int i;
+
+    /* Move all lines up */
+    for (i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH * 2; i++) {
+        VIDEO_BUF[i] = VIDEO_BUF[i + VGA_WIDTH * 2];
+    }
+
+    /* Clear last line */
+    for (i = (VGA_HEIGHT - 1) * VGA_WIDTH * 2;
+         i < VGA_HEIGHT * VGA_WIDTH * 2;
+         i += 2) {
+        VIDEO_BUF[i]   = ' ';
+        VIDEO_BUF[i+1] = 0x07;
+    }
+
+    cursor_pos -= VGA_WIDTH * 2;
+}
+
+/*++
+
+Routine Description:
+
     Updates the hardware text-mode cursor position.
-
-Arguments:
-
-    None.
-
-Return Value:
-
-    None.
 
 --*/
 
@@ -65,15 +92,6 @@ Routine Description:
     Prints a single character with an attribute at the current cursor
     position and advances the cursor.
 
-Arguments:
-
-    Character - Character to print.
-    Attribute - Attribute byte.
-
-Return Value:
-
-    None.
-
 --*/
 
 VOID
@@ -83,10 +101,15 @@ PrintChar (
     )
 {
     if (Character == '\n') {
-        cursor_pos = (cursor_pos / 160 + 1) * 160;
+        cursor_pos = (cursor_pos / (VGA_WIDTH * 2) + 1) * (VGA_WIDTH * 2);
     } else {
         VIDEO_BUF[cursor_pos++] = Character;
         VIDEO_BUF[cursor_pos++] = Attribute;
+    }
+
+    /* Scroll if we reached bottom */
+    if (cursor_pos >= VGA_SIZE) {
+        Scroll();
     }
 
     UpdateCursor();
@@ -97,14 +120,6 @@ PrintChar (
 Routine Description:
 
     Prints a null-terminated string using the default attribute.
-
-Arguments:
-
-    String - String to print.
-
-Return Value:
-
-    None.
 
 --*/
 
@@ -125,14 +140,6 @@ Print (
 Routine Description:
 
     Prints a decimal integer.
-
-Arguments:
-
-    Number - Integer to print.
-
-Return Value:
-
-    None.
 
 --*/
 
@@ -171,14 +178,6 @@ Routine Description:
 
     Clears the text-mode screen and resets the cursor.
 
-Arguments:
-
-    None.
-
-Return Value:
-
-    None.
-
 --*/
 
 VOID
@@ -188,7 +187,7 @@ ClearScreen (
 {
     int Index;
 
-    for (Index = 0; Index < 4000; Index += 2) {
+    for (Index = 0; Index < VGA_SIZE; Index += 2) {
         VIDEO_BUF[Index]   = ' ';
         VIDEO_BUF[Index+1] = 0x07;
     }
