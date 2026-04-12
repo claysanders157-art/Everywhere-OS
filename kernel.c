@@ -12,7 +12,7 @@ Abstract:
 Author:
 
     Noah Juopperi <nipfswd@gmail.com>
-
+    Clay Sanders (made og kernel) <claylikepython@yahoo.com>
 Environment:
 
     Text-mode VGA, PC keyboard controller.
