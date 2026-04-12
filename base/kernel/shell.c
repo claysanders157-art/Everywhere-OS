@@ -27,9 +27,77 @@ Environment:
 #include "inc/snake.h"
 #include "inc/box.h"
 #include "../fs/ext2/inc/ext2.h"
+#include "../fs/ext2/inc/ext2_inode.h"
+#include "../fs/ext2/inc/ext2_dir.h"
 
 int  shift_pressed = 0;
 char user_name[32] = "User";
+
+/*
+ * Current working directory.  Always an absolute path, never a
+ * trailing slash except when it is the root itself.
+ */
+char cwd[256] = "/";
+
+/*++
+
+Routine Description:
+
+    Resolves Arg into an absolute path stored in Out (capacity OutSize).
+    If Arg is already absolute it is copied as-is.  Otherwise it is
+    appended to the current working directory.
+
+Arguments:
+
+    Arg     - Input path (relative or absolute).
+    Out     - Buffer to receive the resolved absolute path.
+    OutSize - Size of Out in bytes.
+
+Return Value:
+
+    None.
+
+--*/
+
+static VOID
+ResolvePath (
+    const char* Arg,
+    char*       Out,
+    int         OutSize
+    )
+{
+    int I;
+    int J;
+
+    if (Arg[0] == '/') {
+        /* Already absolute. */
+        for (I = 0; Arg[I] && I < OutSize - 1; I++) {
+            Out[I] = Arg[I];
+        }
+        Out[I] = '\0';
+        return;
+    }
+
+    /* Build cwd + '/' + Arg. */
+    I = 0;
+    J = 0;
+
+    while (cwd[J] && I < OutSize - 1) {
+        Out[I++] = cwd[J++];
+    }
+
+    /* Add separator only if cwd is not root. */
+    if (I > 1 && Out[I - 1] != '/' && I < OutSize - 1) {
+        Out[I++] = '/';
+    }
+
+    J = 0;
+    while (Arg[J] && I < OutSize - 1) {
+        Out[I++] = Arg[J++];
+    }
+
+    Out[I] = '\0';
+}
 
 /*++
 
@@ -375,29 +443,104 @@ ProcessCommand (
     if (StrNICmp(CommandLower, "mkdir ", 6) == 0) {
         const char* Arg;
         char        Path[256];
-        int         J;
 
         Arg = Command + 6;
-
         while (*Arg == ' ') {
             Arg++;
         }
 
         if (*Arg == '\0') {
             Print("Usage: mkdir <path>\n");
-        } else if (Arg[0] == '/') {
-            /* Already absolute -- use as-is. */
-            Ext2Mkdir(Arg);
         } else {
-            /* Relative name - prepend '/' to make it absolute. */
-            Path[0] = '/';
-            for (J = 0; Arg[J] && J < 254; J++) {
-                Path[J + 1] = Arg[J];
-            }
-            Path[J + 1] = '\0';
+            ResolvePath(Arg, Path, 256);
             Ext2Mkdir(Path);
         }
 
+        return;
+    }
+
+    if (StrICmp(CommandLower, "ls") == 0 ||
+        StrNICmp(CommandLower, "ls ", 3) == 0) {
+        const char* Arg;
+        char        Path[256];
+
+        Arg = CommandLower + 2;
+        while (*Arg == ' ') {
+            Arg++;
+        }
+
+        if (*Arg == '\0') {
+            /* No argument — list cwd. */
+            Ext2Ls(cwd);
+        } else {
+            ResolvePath(Command + (int)(Arg - CommandLower), Path, 256);
+            Ext2Ls(Path);
+        }
+
+        return;
+    }
+
+    if (StrNICmp(CommandLower, "cd ", 3) == 0 ||
+        StrICmp(CommandLower, "cd") == 0) {
+        const char* Arg;
+        char        Path[256];
+        uint32_t    Ino;
+        EXT2_INODE  Inode;
+        int         J;
+
+        Arg = CommandLower + 2;
+        while (*Arg == ' ') {
+            Arg++;
+        }
+
+        if (*Arg == '\0') {
+            /* cd with no argument goes to root. */
+            cwd[0] = '/';
+            cwd[1] = '\0';
+            return;
+        }
+
+        ResolvePath(Command + (int)(Arg - CommandLower), Path, 256);
+
+        /* Verify the target exists and is a directory. */
+        Ino = Ext2Lookup(Path);
+        if (Ino == 0) {
+            Print("cd: not found: ");
+            Print(Path);
+            Print("\n");
+            return;
+        }
+
+        if (Ext2ReadInode(Ino, &Inode) != 0) {
+            Print("cd: cannot read inode\n");
+            return;
+        }
+
+        if ((Inode.i_mode & EXT2_S_IFDIR) == 0) {
+            Print("cd: not a directory: ");
+            Print(Path);
+            Print("\n");
+            return;
+        }
+
+        /* Commit the new cwd, stripping any trailing slash unless root. */
+        J = 0;
+        while (Path[J] && J < 254) {
+            cwd[J] = Path[J];
+            J++;
+        }
+        cwd[J] = '\0';
+
+        if (J > 1 && cwd[J - 1] == '/') {
+            cwd[J - 1] = '\0';
+        }
+
+        return;
+    }
+
+    if (StrICmp(CommandLower, "pwd") == 0) {
+        Print(cwd);
+        Print("\n");
         return;
     }
 
@@ -409,6 +552,9 @@ ProcessCommand (
         Print("  delete <name> - Delete a .note file.\n");
         Print("  box <name>    - Run a BOX script from a .note file.\n");
         Print("  box help      - Show BOX scripting help.\n");
+        Print("  ls [path]     - List directory contents.\n");
+        Print("  cd <path>     - Change current directory.\n");
+        Print("  pwd           - Print current directory.\n");
         Print("  mkdir <path>  - Create a new directory.\n");
         Print("  snake         - Play the snake game.\n");
         Print("  setup         - Set your user name.\n");
