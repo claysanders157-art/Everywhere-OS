@@ -5,20 +5,32 @@ LD      = ld
 NASM    = nasm
 
 CFLAGS  = -c -ffreestanding -fno-builtin -fno-stack-protector -nostdlib \
-          -m32 -Wall -Wextra -Iinclude -I./public/sdk/inc
+          -m32 -Wall -Wextra \
+          -I./base/kernel/inc \
+          -I./public/sdk/inc
 
 LDFLAGS = -m elf_i386 -T kernel.ld
-
 ASFLAGS = -f elf32
 
 BUILD = build
 ISO   = iso
 
+KERNEL_DIR = base/kernel
+
 ENTRY_SRC = entry.asm
 ENTRY_OBJ = $(BUILD)/entry.o
 
-KERNEL_SRC = kernel.c
-KERNEL_OBJ = $(BUILD)/kernel.o
+KERNEL_SRCS = \
+    $(KERNEL_DIR)/kernel.c \
+    $(KERNEL_DIR)/io.c     \
+    $(KERNEL_DIR)/video.c  \
+    $(KERNEL_DIR)/string.c \
+    $(KERNEL_DIR)/fs.c     \
+    $(KERNEL_DIR)/shell.c  \
+    $(KERNEL_DIR)/snake.c  \
+    $(KERNEL_DIR)/box.c
+
+KERNEL_OBJS = $(patsubst $(KERNEL_DIR)/%.c, $(BUILD)/%.o, $(KERNEL_SRCS))
 
 KERNEL_ELF = $(BUILD)/kernel.elf
 OS_ISO     = $(BUILD)/os.iso
@@ -33,10 +45,10 @@ all: $(OS_ISO)
 $(ENTRY_OBJ): $(ENTRY_SRC)
 	$(NASM) $(ASFLAGS) $< -o $@
 
-$(KERNEL_OBJ): $(KERNEL_SRC)
+$(BUILD)/%.o: $(KERNEL_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
-$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJ)
+$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJS)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 $(ISO)/boot/kernel.elf: $(KERNEL_ELF)
