@@ -18,6 +18,8 @@ Author:
 
 #include "types.h"
 
-VOID    outb         ( uint16_t Port, uint8_t Data );
-uint8_t inb          ( uint16_t Port );
-VOID    RebootSystem ( VOID );
+VOID     outb         ( uint16_t Port, uint8_t  Data );
+VOID     outw         ( uint16_t Port, uint16_t Data );
+uint8_t  inb          ( uint16_t Port );
+uint16_t inw          ( uint16_t Port );
+VOID     RebootSystem ( VOID );

@@ -26,6 +26,7 @@ Environment:
 #include "inc/fs.h"
 #include "inc/snake.h"
 #include "inc/box.h"
+#include "../fs/ext2/inc/ext2.h"
 
 int  shift_pressed = 0;
 char user_name[32] = "User";
@@ -371,6 +372,35 @@ ProcessCommand (
         return;
     }
 
+    if (StrNICmp(CommandLower, "mkdir ", 6) == 0) {
+        const char* Arg;
+        char        Path[256];
+        int         J;
+
+        Arg = Command + 6;
+
+        while (*Arg == ' ') {
+            Arg++;
+        }
+
+        if (*Arg == '\0') {
+            Print("Usage: mkdir <path>\n");
+        } else if (Arg[0] == '/') {
+            /* Already absolute -- use as-is. */
+            Ext2Mkdir(Arg);
+        } else {
+            /* Relative name - prepend '/' to make it absolute. */
+            Path[0] = '/';
+            for (J = 0; Arg[J] && J < 254; J++) {
+                Path[J + 1] = Arg[J];
+            }
+            Path[J + 1] = '\0';
+            Ext2Mkdir(Path);
+        }
+
+        return;
+    }
+
     if (StrICmp(CommandLower, "what to do") == 0) {
         Print("Commands:\n");
         Print("  clear         - Clear the screen.\n");
@@ -379,6 +409,7 @@ ProcessCommand (
         Print("  delete <name> - Delete a .note file.\n");
         Print("  box <name>    - Run a BOX script from a .note file.\n");
         Print("  box help      - Show BOX scripting help.\n");
+        Print("  mkdir <path>  - Create a new directory.\n");
         Print("  snake         - Play the snake game.\n");
         Print("  setup         - Set your user name.\n");
         Print("  what to do    - Show this command list.\n");

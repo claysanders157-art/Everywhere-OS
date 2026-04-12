@@ -50,6 +50,32 @@ outb (
 
 Routine Description:
 
+    Writes a word to an I/O port.
+
+Arguments:
+
+    Port - IO port.
+    Data - Word to write.
+
+Return Value:
+
+    None.
+
+--*/
+
+VOID
+outw (
+    uint16_t Port,
+    uint16_t Data
+    )
+{
+    __asm__("outw %1, %0" : : "dN" (Port), "a" (Data));
+}
+
+/*++
+
+Routine Description:
+
     Reads a byte from an IO port.
 
 Arguments:
@@ -70,6 +96,33 @@ inb (
     uint8_t Result;
 
     __asm__("inb %1, %0" : "=a" (Result) : "Nd" (Port));
+    return Result;
+}
+
+/*++
+
+Routine Description:
+
+    Reads a word from an IO port.
+
+Arguments:
+
+    Port - IO port.
+
+Return Value:
+
+    Word read.
+
+--*/
+
+uint16_t
+inw (
+    uint16_t Port
+    )
+{
+    uint16_t Result;
+
+    __asm__("inw %1, %0" : "=a" (Result) : "Nd" (Port));
     return Result;
 }
 

@@ -5,9 +5,11 @@ LD      = ld
 NASM    = nasm
 
 CFLAGS  = -c -ffreestanding -fno-builtin -fno-stack-protector -nostdlib \
-          -m32 -Wall -Wextra \
-          -I./base/kernel/inc \
-          -I./public/sdk/inc
+          -m32 -Wall -Wextra   \
+          -I./base/kernel/inc  \
+          -I./public/sdk/inc   \
+		  -I./base/fs/ext2/inc \
+		  -I./base/fs/inc	   \
 
 LDFLAGS = -m elf_i386 -T kernel.ld
 
@@ -31,10 +33,27 @@ KERNEL_SRCS = \
     $(KERNEL_DIR)/snake.c  \
     $(KERNEL_DIR)/box.c
 
+FS_DIR = base/fs
+EXT2_DIR = base/fs/ext2
+
+FS_SRCS = \
+    $(FS_DIR)/ata.c          \
+    $(EXT2_DIR)/ext2.c       \
+    $(EXT2_DIR)/ext2_block.c \
+    $(EXT2_DIR)/ext2_inode.c \
+    $(EXT2_DIR)/ext2_dir.c
+
+FS_OBJS = $(patsubst $(FS_DIR)/%.c,    $(BUILD)/fs_%.o, $(FS_DIR)/ata.c) \
+          $(patsubst $(EXT2_DIR)/%.c,   $(BUILD)/ext2_%.o, $(EXT2_DIR)/ext2.c) \
+          $(patsubst $(EXT2_DIR)/%.c,   $(BUILD)/ext2_%.o, $(EXT2_DIR)/ext2_block.c) \
+          $(patsubst $(EXT2_DIR)/%.c,   $(BUILD)/ext2_%.o, $(EXT2_DIR)/ext2_inode.c) \
+          $(patsubst $(EXT2_DIR)/%.c,   $(BUILD)/ext2_%.o, $(EXT2_DIR)/ext2_dir.c)
+
 KERNEL_OBJS = $(patsubst $(KERNEL_DIR)/%.c, $(BUILD)/%.o, $(KERNEL_SRCS))
 
 KERNEL_ELF = $(BUILD)/kernel.elf
 OS_ISO     = $(BUILD)/os.iso
+DISK_IMG   = $(BUILD)/disk.img
 
 .PHONY: all clean run
 
@@ -49,7 +68,13 @@ $(ENTRY_OBJ): $(ENTRY_SRC)
 $(BUILD)/%.o: $(KERNEL_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
-$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJS)
+$(BUILD)/fs_%.o: $(FS_DIR)/%.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD)/ext2_%.o: $(EXT2_DIR)/%.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJS) $(FS_OBJS)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 $(ISO)/boot/kernel.elf: $(KERNEL_ELF)
@@ -64,11 +89,16 @@ $(ISO)/boot/grub/grub.cfg:
 	echo '    boot' >> $@
 	echo '}' >> $@
 
+$(DISK_IMG):
+	dd if=/dev/zero of=$@ bs=512 count=131072
+	mkfs.ext2 -b 1024 $@
+
 $(OS_ISO): $(ISO)/boot/kernel.elf $(ISO)/boot/grub/grub.cfg
 	grub-mkrescue -o $@ $(ISO)
 
-run: $(OS_ISO)
-	qemu-system-i386 -cdrom $(OS_ISO)
+run: $(OS_ISO) $(DISK_IMG)
+	qemu-system-i386 -cdrom $(OS_ISO) -hda $(DISK_IMG)
 
 clean:
-	rm -rf $(BUILD) $(ISO)
+	rm -rf $(BUILD)/entry.o $(KERNEL_OBJS) $(FS_OBJS) $(KERNEL_ELF) $(OS_ISO)
+	rm -rf $(ISO)
