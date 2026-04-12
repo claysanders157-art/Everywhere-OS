@@ -1,0 +1,9 @@
+~Nipfswd
+
+For some reason this build works best on wsl?
+
+01:59 - 2026-04-12: ~Nipfswd
+
+Migrated the kernel to a base\kernel directory for better modularity
+and to make extending it easier. Perhaps move the game into either a
+userspace folder or a shell folder.
