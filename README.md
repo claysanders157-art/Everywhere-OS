@@ -1,4 +1,4 @@
-# Everywhere OS
+# 🌐 Everywhere OS
 
 Modern [operating systems](https://en.wikipedia.org/wiki/Operating_system) face a fundamental problem; companies continually release updates to patch issues, fully aware that their systems fall short. Yet they rarely take the step of rethinking their platforms from the ground up. They avoid confronting the truth.
 
