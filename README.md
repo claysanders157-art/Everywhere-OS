@@ -26,6 +26,7 @@ make
 Before running the OS, make sure you have [QEMU](https://www.qemu.org/download/)
 
 > "sudo apt update" is optional
+
 Ubuntu // Debian // Mint:
 ```bash
 sudo apt update
