@@ -9,3 +9,47 @@ Everywhere OS is built to change that. It is an [operating system](https://en.wi
 Everywhere OS was founded by **Clay Sanders** with a mission to create a system that truly works for everyone.
 
 If you want to download our latest release, or just learn more, check out our homepage: Learn more: https://sites.google.com/view/everywhereos/home
+
+# Building
+Build using:
+
+> Use this **only** if you have build files (*.o) in your root directory.
+```bash
+make clean
+```
+
+Build the OS:
+```
+make
+```
+
+Before running the OS, make sure you have [QEMU](https://www.qemu.org/download/)
+
+> "sudo apt update" is optional
+Ubuntu // Debian // Mint:
+```bash
+sudo apt update
+sudo apt install qemu-system-i386
+```
+
+Fedora:
+```bash
+sudo dnf install qemu-system-i386
+```
+
+Arch Linux // Manjaro:
+```bash
+sudo pacman -S qemu-full
+```
+
+Alpine:
+```bash
+sudo apk add qemu-system-i386
+```
+
+Finally, to run the OS, do:
+```bash
+qemu-system-i386 -kernel kernel
+```
+
+![What you'll see](docs/images/reference1.png)
