@@ -1,4 +1,4 @@
-# Makefile for Everywhere OS Kernel -- grub added
+# Makefile for Everywhere OS Kernel -- multi-module version
 
 CC      = gcc
 LD      = ld
@@ -6,8 +6,8 @@ NASM    = nasm
 
 CFLAGS  = -c -ffreestanding -fno-builtin -fno-stack-protector -nostdlib \
           -m32 -Wall -Wextra \
-          -I./base/kernel/inc \
-          -I./public/sdk/inc
+          -I./base/ntos/inc \
+          -I./shell/explorer
 
 LDFLAGS = -m elf_i386 -T kernel.ld
 ASFLAGS = -f elf32
@@ -15,22 +15,29 @@ ASFLAGS = -f elf32
 BUILD = build
 ISO   = iso
 
-KERNEL_DIR = base/kernel
-
 ENTRY_SRC = entry.asm
 ENTRY_OBJ = $(BUILD)/entry.o
 
-KERNEL_SRCS = \
-    $(KERNEL_DIR)/kernel.c \
-    $(KERNEL_DIR)/io.c     \
-    $(KERNEL_DIR)/video.c  \
-    $(KERNEL_DIR)/string.c \
-    $(KERNEL_DIR)/fs.c     \
-    $(KERNEL_DIR)/shell.c  \
-    $(KERNEL_DIR)/snake.c  \
-    $(KERNEL_DIR)/box.c
+# Kernel core (base\ntos\ke)
+NTOS_SRC = base/ntos/ke/io.c \
+           base/ntos/ke/video.c \
+           base/ntos/ke/font.c \
+           base/ntos/ke/mouse.c \
+           base/ntos/ke/keyboard.c \
+           base/ntos/ke/window.c
 
-KERNEL_OBJS = $(patsubst $(KERNEL_DIR)/%.c, $(BUILD)/%.o, $(KERNEL_SRCS))
+# Shell / Explorer (userspace)
+SHELL_SRC = shell/explorer/desktop.c \
+            shell/explorer/taskbar.c \
+            shell/explorer/shell.c \
+            shell/explorer/notes.c \
+            shell/explorer/snake.c
+
+# Main entry
+MAIN_SRC = kernel.c
+
+ALL_C_SRC = $(NTOS_SRC) $(SHELL_SRC) $(MAIN_SRC)
+ALL_C_OBJ = $(patsubst %.c,$(BUILD)/%.o,$(ALL_C_SRC))
 
 KERNEL_ELF = $(BUILD)/kernel.elf
 OS_ISO     = $(BUILD)/os.iso
@@ -38,6 +45,8 @@ OS_ISO     = $(BUILD)/os.iso
 .PHONY: all clean run
 
 $(shell mkdir -p $(BUILD))
+$(shell mkdir -p $(BUILD)/base/ntos/ke)
+$(shell mkdir -p $(BUILD)/shell/explorer)
 $(shell mkdir -p $(ISO)/boot/grub)
 
 all: $(OS_ISO)
@@ -45,10 +54,10 @@ all: $(OS_ISO)
 $(ENTRY_OBJ): $(ENTRY_SRC)
 	$(NASM) $(ASFLAGS) $< -o $@
 
-$(BUILD)/%.o: $(KERNEL_DIR)/%.c
+$(BUILD)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
-$(KERNEL_ELF): $(ENTRY_OBJ) $(KERNEL_OBJS)
+$(KERNEL_ELF): $(ENTRY_OBJ) $(ALL_C_OBJ)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 $(ISO)/boot/kernel.elf: $(KERNEL_ELF)

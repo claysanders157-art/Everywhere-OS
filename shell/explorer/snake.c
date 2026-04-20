@@ -1,0 +1,124 @@
+/*++
+
+Copyright (c) 2026  The EverywhereOS Authors
+
+Module Name:
+
+    snake.c
+
+Abstract:
+
+    Snake game logic: initialization, movement, food, and rendering.
+
+Author:
+
+    Noah Juopperi <nipfswd@gmail.com>
+    Clay Sanders (made the first version of the kernel) <claylikepython@yahoo.com>
+
+Environment:
+
+    Userspace
+
+--*/
+
+#include "explorer.h"
+
+int snake_x[SNAKE_MAX];
+int snake_y[SNAKE_MAX];
+int snake_len = 5;
+int snake_dx = 1;
+int snake_dy = 0;
+int food_x = 20;
+int food_y = 10;
+
+/*++
+
+Routine Description:
+
+    Initializes the snake body positions.
+
+Arguments:
+
+    None.
+
+Return Value:
+
+    None.
+
+--*/
+
+void SnakeInit(void) {
+    for (int i = 0; i < snake_len; i++) {
+        snake_x[i] = 10 - i;
+        snake_y[i] = 10;
+    }
+}
+
+/*++
+
+Routine Description:
+
+    Advances the snake by one step, handles boundary clamping and
+    food collision.
+
+Arguments:
+
+    None.
+
+Return Value:
+
+    None.
+
+--*/
+
+void SnakeStep(void) {
+    if (!SnakeWin.visible || SnakeWin.minimized) return;
+
+    for (int i = snake_len - 1; i > 0; i--) {
+        snake_x[i] = snake_x[i - 1];
+        snake_y[i] = snake_y[i - 1];
+    }
+    snake_x[0] += snake_dx;
+    snake_y[0] += snake_dy;
+
+    if (snake_x[0] < 0) snake_x[0] = 0;
+    if (snake_y[0] < 0) snake_y[0] = 0;
+    if (snake_x[0] > SnakeWin.w - 10) snake_x[0] = SnakeWin.w - 10;
+    if (snake_y[0] > SnakeWin.h - 20) snake_y[0] = SnakeWin.h - 20;
+
+    if (snake_x[0] == food_x && snake_y[0] == food_y) {
+        if (snake_len < SNAKE_MAX) snake_len++;
+        food_x = (food_x * 7 + 13) % (SnakeWin.w - 10);
+        food_y = (food_y * 5 + 11) % (SnakeWin.h - 20);
+    }
+}
+
+/*++
+
+Routine Description:
+
+    Draws the snake body and food inside the snake window.
+
+Arguments:
+
+    None.
+
+Return Value:
+
+    None.
+
+--*/
+
+void SnakeDraw(void) {
+    if (!SnakeWin.visible || SnakeWin.minimized) return;
+
+    FillRect(SnakeWin.x + 2, SnakeWin.y + 12, SnakeWin.w - 4, SnakeWin.h - 14, 0x00);
+
+    for (int i = 0; i < snake_len; i++) {
+        PutPixel(SnakeWin.x + 5 + snake_x[i],
+                 SnakeWin.y + 15 + snake_y[i], 0x0A);
+    }
+
+    PutPixel(SnakeWin.x + 5 + food_x,
+             SnakeWin.y + 15 + food_y, 0x04);
+}

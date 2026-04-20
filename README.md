@@ -9,3 +9,6 @@ Everywhere OS is built to change that. It is an [operating system](https://en.wi
 Everywhere OS was founded by **Clay Sanders** with a mission to create a system that truly works for everyone.
 
 If you want to download our latest release, or just learn more, check out our homepage: Learn more: https://sites.google.com/view/everywhereos/home
+
+Current state:
+![Current OS](docs/imgs/2026-04-20-shell.png)

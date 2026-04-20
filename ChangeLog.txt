@@ -1,0 +1,25 @@
+1.0.1 (2026/04/20)
+
+Fixes
+(common)
+00001 Font rendering shows identical blocks for all characters - replaced with proper 8x8 bitmap font (ASCII 32-126)
+00002 Snake game has no controls - added arrow key input (up/down/left/right scancodes)
+00003 Notes window cannot receive keyboard input - added window focus system with click-to-focus
+00004 Taskbar buttons for minimized windows are not clickable - added HandleTaskbarClick to restore windows
+00005 All keyboard input always goes to Shell regardless of context - input now routed by active window
+00006 Functions lack documentation - added DDK-style /*++ --*/ comment blocks to all routines
+00007 Kernel reboots infinitely on startup - SetMode13h used int 0x10 BIOS call in protected mode causing triple fault
+00008 GetKeyChar consumes mouse bytes from PS/2 buffer, misinterpreting them as scancodes (e.g. ESC) - added status bit 5 check
+00009 UpdateMouse consumes keyboard bytes from PS/2 buffer - added status bit 5 check to only read mouse data
+00010 InitMouse leaves stale ACK bytes in PS/2 buffer - added flush loop after initialization
+00011 Multiboot header does not request video mode - added 320x200x8 video mode fields so GRUB sets mode 13h before kernel entry
+00012 Screen flickers every frame - added double buffering with off-screen back buffer and FlipBuffers copy to VGA
+00013 Entier OS is a single kernel.c file - split into multi-module layout
+
+# 12:30
+
+Features
+(window)
+00014 Added fullscreen button to window title bar - click to expand window to fill screen, click again to restore original size
+00015 Dragging is disabled while a window is fullscreen to prevent accidental moves
+00016 Window physics (velocity/bounce) are skipped while fullscreen
