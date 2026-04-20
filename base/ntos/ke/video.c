@@ -68,8 +68,34 @@ Return Value:
 
 --*/
 
-void SetMode13h(void) {
-    /* Video mode is now set by GRUB via the multiboot header. */
+/*++
+
+Routine Description:
+
+    Reads the framebuffer address from the multiboot info structure
+    provided by GRUB. Falls back to 0xA0000 if unavailable.
+
+Arguments:
+
+    mbi - Pointer to the multiboot info structure.
+
+Return Value:
+
+    None.
+
+--*/
+
+void SetupFramebuffer(uint32_t* mbi) {
+    if (!mbi) return;
+
+    uint32_t flags = mbi[0];
+
+    /* Bit 12 = framebuffer info available */
+    if (flags & (1 << 12)) {
+        /* framebuffer_addr is at byte offset 88 (uint64_t) */
+        uint32_t fb_lo = mbi[22]; /* offset 88 / 4 */
+        FB = (uint8_t*)(uintptr_t)fb_lo;
+    }
 }
 
 /*++
