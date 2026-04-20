@@ -121,6 +121,7 @@ Return Value:
 void InitMouse(void) {
     uint8_t status;
 
+    /* Enable auxiliary PS/2 device */
     outb(0x64, 0xA8);
     MouseWait(1);
     outb(0x64, 0x20);
@@ -131,8 +132,27 @@ void InitMouse(void) {
     MouseWait(1);
     outb(0x60, status);
 
+    /* Reset to defaults */
     MouseWrite(0xF6);
     MouseRead();
+
+    /* Set 1:1 scaling (no acceleration) */
+    MouseWrite(0xE6);
+    MouseRead();
+
+    /* Set resolution: 8 counts per mm (highest) */
+    MouseWrite(0xE8);
+    MouseRead();
+    MouseWrite(0x03);
+    MouseRead();
+
+    /* Set sample rate: 200 samples/sec */
+    MouseWrite(0xF3);
+    MouseRead();
+    MouseWrite(200);
+    MouseRead();
+
+    /* Enable data reporting */
     MouseWrite(0xF4);
     MouseRead();
 
@@ -160,10 +180,33 @@ Return Value:
 --*/
 
 void UpdateMouse(void) {
-    if (!(inb(0x64) & 1)) return;
+    /* Mouse position is now updated by the IRQ12 ISR (MouseIsr).
+       Nothing to poll here. */
+    (void)0;
+}
 
-    /* Only read if bit 5 indicates this is mouse data */
-    if (!(inb(0x64) & 0x20)) return;
+/*++
+
+Routine Description:
+
+    IRQ12 interrupt service routine. Called by the HAL stub whenever
+    the PS/2 mouse sends a byte. Assembles 3-byte packets and updates
+    the global mouse position and button state immediately.
+
+Arguments:
+
+    None.
+
+Return Value:
+
+    None.
+
+--*/
+
+void MouseIsr(void) {
+    uint8_t status = inb(0x64);
+    if (!(status & 1)) return;
+    if (!(status & 0x20)) return;
 
     static uint8_t packet[3];
     static int idx = 0;
@@ -171,6 +214,9 @@ void UpdateMouse(void) {
     packet[idx++] = inb(0x60);
     if (idx < 3) return;
     idx = 0;
+
+    if (!(packet[0] & 0x08)) return;
+    if (packet[0] & 0xC0) return;
 
     int dx = (int8_t)packet[1];
     int dy = (int8_t)packet[2];
@@ -204,10 +250,34 @@ Return Value:
 --*/
 
 void DrawMouseCursor(void) {
-    /* Bright red triangle */
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j <= i; j++) {
-            PutPixel(mouse_x + j, mouse_y + i, 0x04);
+    /*
+     * 16x16 arrow cursor inspired by classic desktop cursors.
+     * 0 = transparent, 1 = black outline, 2 = white fill.
+     */
+    static const uint8_t cursor[16][16] = {
+        {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        {1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        {1,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        {1,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0},
+        {1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0},
+        {1,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0},
+        {1,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0},
+        {1,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0},
+        {1,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0},
+        {1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0},
+        {1,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0},
+        {1,2,2,2,2,2,2,1,1,1,1,0,0,0,0,0},
+        {1,2,2,2,1,2,2,1,0,0,0,0,0,0,0,0},
+        {1,2,2,1,0,1,2,2,1,0,0,0,0,0,0,0},
+        {1,2,1,0,0,1,2,2,1,0,0,0,0,0,0,0},
+        {1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0},
+    };
+    for (int y = 0; y < 16; y++) {
+        for (int x = 0; x < 16; x++) {
+            if (cursor[y][x] == 1)
+                PutPixel(mouse_x + x, mouse_y + y, 0x00);
+            else if (cursor[y][x] == 2)
+                PutPixel(mouse_x + x, mouse_y + y, 0x0F);
         }
     }
 }

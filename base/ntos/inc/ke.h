@@ -45,14 +45,14 @@ void RebootSystem(void);
 
 /* ********** VGA ********** */
 
-#define SCR_W 320
-#define SCR_H 200
+#define SCR_W 640
+#define SCR_H 480
 
 extern uint8_t* FB;
 extern uint8_t backbuf[];
 
 void FlipBuffers(void);
-void SetMode13h(void);
+void SetupFramebuffer(uint32_t* mbi);
 void PutPixel(int x, int y, uint8_t c);
 void FillRect(int x, int y, int w, int h, uint8_t c);
 
@@ -63,6 +63,10 @@ extern uint8_t Font8x8[128][8];
 void InitFont(void);
 void DrawChar(int x, int y, char ch, uint8_t color);
 void DrawString(int x, int y, const char* s, uint8_t color);
+
+/* ********** Keyboard Input Routing ********** */
+
+void HandleKeyboardInput(char ch);
 
 /* ********** Window ********** */
 
@@ -96,6 +100,12 @@ extern int mouse_prev_buttons;
 void InitMouse(void);
 void UpdateMouse(void);
 void DrawMouseCursor(void);
+void MouseIsr(void);
+
+/* ********** HAL ********** */
+
+void HalInitInterrupts(void);
+void HalEndOfInterrupt(uint8_t irq);
 
 /* ********** Keyboard ********** */
 

@@ -26,17 +26,23 @@ NTOS_SRC = base/ntos/ke/io.c \
            base/ntos/ke/keyboard.c \
            base/ntos/ke/window.c
 
+# HAL (base\hals\halx86)
+HAL_SRC = base/hals/halx86/halinit.c
+HAL_ASM_SRC = base/hals/halx86/irq12.asm
+HAL_ASM_OBJ = $(BUILD)/base/hals/halx86/irq12.o
+
 # Shell / Explorer (userspace)
 SHELL_SRC = shell/explorer/desktop.c \
             shell/explorer/taskbar.c \
             shell/explorer/shell.c \
             shell/explorer/notes.c \
-            shell/explorer/snake.c
+            shell/explorer/snake.c \
+            shell/explorer/input.c
 
 # Main entry
 MAIN_SRC = kernel.c
 
-ALL_C_SRC = $(NTOS_SRC) $(SHELL_SRC) $(MAIN_SRC)
+ALL_C_SRC = $(NTOS_SRC) $(HAL_SRC) $(SHELL_SRC) $(MAIN_SRC)
 ALL_C_OBJ = $(patsubst %.c,$(BUILD)/%.o,$(ALL_C_SRC))
 
 KERNEL_ELF = $(BUILD)/kernel.elf
@@ -46,6 +52,7 @@ OS_ISO     = $(BUILD)/os.iso
 
 $(shell mkdir -p $(BUILD))
 $(shell mkdir -p $(BUILD)/base/ntos/ke)
+$(shell mkdir -p $(BUILD)/base/hals/halx86)
 $(shell mkdir -p $(BUILD)/shell/explorer)
 $(shell mkdir -p $(ISO)/boot/grub)
 
@@ -57,7 +64,10 @@ $(ENTRY_OBJ): $(ENTRY_SRC)
 $(BUILD)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
-$(KERNEL_ELF): $(ENTRY_OBJ) $(ALL_C_OBJ)
+$(HAL_ASM_OBJ): $(HAL_ASM_SRC)
+	$(NASM) $(ASFLAGS) $< -o $@
+
+$(KERNEL_ELF): $(ENTRY_OBJ) $(ALL_C_OBJ) $(HAL_ASM_OBJ)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 $(ISO)/boot/kernel.elf: $(KERNEL_ELF)
@@ -76,7 +86,7 @@ $(OS_ISO): $(ISO)/boot/kernel.elf $(ISO)/boot/grub/grub.cfg
 	grub-mkrescue -o $@ $(ISO)
 
 run: $(OS_ISO)
-	qemu-system-i386 -cdrom $(OS_ISO)
+	qemu-system-i386 -cdrom $(OS_ISO) -full-screen
 
 clean:
 	rm -rf $(BUILD) $(ISO)
