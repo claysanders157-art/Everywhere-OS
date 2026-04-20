@@ -15,18 +15,6 @@ Fixes
 00011 Multiboot header does not request video mode - added 320x200x8 video mode fields so GRUB sets mode 13h before kernel entry
 00012 Screen flickers every frame - added double buffering with off-screen back buffer and FlipBuffers copy to VGA
 00013 Entier OS is a single kernel.c file - split into multi-module layout
-
-# 12:30
-
-Features
-(window)
-00014 Added fullscreen button to window title bar - click to expand window to fill screen, click again to restore original size
-00015 Dragging is disabled while a window is fullscreen to prevent accidental moves
-00016 Window physics (velocity/bounce) are skipped while fullscreen
-
-# 12:52
-
-Fixes
 (mouse)
 00017 Mouse cursor is a shapeless red triangle that disappears on dark backgrounds - replaced with proper 12x8 arrow cursor with black outline and white fill
 00020 Mouse cursor still too small and poorly shaped for 640x480 - enlarged to 16x16 with classic arrow shape, proper tail split, and full black outline
@@ -36,19 +24,30 @@ Fixes
 00024 Mouse cursor position drifts from host cursor in VM - configured PS/2 mouse with 1:1 scaling (0xE6), max resolution 8 counts/mm (0xE8 0x03), and 200 samples/sec (0xF3 200)
 00025 QEMU opens in a tiny window instead of fullscreen - added -full-screen flag to QEMU launch command in Makefile
 
+
+Features
+(window)
+00014 Added fullscreen button to window title bar - click to expand window to fill screen, click again to restore original size
+00015 Dragging is disabled while a window is fullscreen to prevent accidental moves
+00016 Window physics (velocity/bounce) are skipped while fullscreen
+
 Features
 (video)
 00018 OS runs at tiny 320x200 resolution - upgraded to 640x480x8 via VESA, multiboot header now requests 640x480, framebuffer address read from GRUB multiboot info
-
 (kernel)
 00019 Keyboard input routing logic lives in kernel.c - moved to shell/explorer/input.c where it belongs as userspace input handling
-
 (mouse)
 00026 Mouse cursor is slow and laggy because it's polled once per frame - converted to interrupt-driven via IRQ12 ISR, mouse data now processed immediately on arrival
-
 (hal)
 00027 No interrupt infrastructure exists - added base/hals/halx86/ with IDT setup, 8259 PIC remapping, and IRQ12 assembly stub matching WS2003 HAL layout
 00028 Interrupt code was accidentally and incorrectly (according to me) placed in ke/ - moved to base/hals/halx86/ to match proper architecture (HAL separate from kernel executive)
 00029 OS reboots on startup after HAL init - no GDT defined so IDT used unknown selector 0x08, added explicit GDT in entry.asm with flat code/data segments
 00030 Unhandled IRQs (timer, etc.) triple-fault because IDT entries were null - added IrqIgnoreStub default handler for all 256 vectors
 00031 PIC mask restore after remap could leave stray IRQs unmasked - now masks ALL IRQs first, then only unmasks IRQ2 (cascade) and IRQ12 (mouse)
+(fs)
+00032 No disk filesystem existed - added EVRYFS under base/fs/evryfs/ (ATA PIO driver in ata.c, filesystem logic in evryfs.c); on-disk layout: LBA 0 superblock, LBA 1 root directory (12 entries), LBA 2+ sequential data; auto-formats a fresh disk on first boot
+(shell)
+00033 No way to create files from the shell - added mktest command that writes "Hello, World!\n" to hello.txt on the EVRYFS volume and shows "Created hello.txt" in the shell output line
+00034 No way to open the file browser from the shell - added files command that opens the Files window
+(explorer)
+00035 No file browser window existed - added Files window (shell/explorer/files.c) showing EVRYFS directory listing with filename and size per row; accessible via files shell command or taskbar

@@ -25,6 +25,8 @@ Environment:
 
 char shell_input[SHELL_INPUT_SIZE];
 int  shell_len = 0;
+char shell_output[64];
+int  shell_has_output = 0;
 
 /*++
 
@@ -65,6 +67,8 @@ Return Value:
 void ShellDraw(void) {
     if (!ShellWin.visible || ShellWin.minimized) return;
     DrawString(ShellWin.x + 4, ShellWin.y + 14, shell_input, 0x0F);
+    if (shell_has_output)
+        DrawString(ShellWin.x + 4, ShellWin.y + 24, shell_output, 0x0A);
 }
 
 /*++
@@ -87,6 +91,8 @@ Return Value:
 void ShellExec(void) {
     if (shell_len == 0) return;
 
+    shell_has_output = 0;
+
     if (StrEq(shell_input, "clear")) {
         ShellClear();
     } else if (StrEq(shell_input, "credits")) {
@@ -98,6 +104,21 @@ void ShellExec(void) {
     } else if (StrEq(shell_input, "notes")) {
         NotesWin.visible = 1;
         NotesWin.minimized = 0;
+    } else if (StrEq(shell_input, "files")) {
+        FilesWin.visible = 1;
+        FilesWin.minimized = 0;
+    } else if (StrEq(shell_input, "mktest")) {
+        static const uint8_t hello[] = "Hello, World!\n";
+        const char* msg;
+        int i = 0;
+        if (EvryFsWriteFile("hello.txt", hello, 14) == 0) {
+            msg = "Created hello.txt";
+        } else {
+            msg = "No disk found";
+        }
+        while (msg[i] && i < 63) { shell_output[i] = msg[i]; i++; }
+        shell_output[i] = 0;
+        shell_has_output = 1;
     }
 
     shell_len = 0;

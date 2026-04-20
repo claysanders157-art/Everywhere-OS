@@ -24,6 +24,7 @@ Environment:
 
 #include "ke.h"
 #include "explorer.h"
+#include "evryfs.h"
 
 /*++
 
@@ -49,6 +50,7 @@ void kernelMain(uint32_t* mbi) {
     InitMouse();
     HalInitInterrupts();
     SnakeInit();
+    EvryFsInit();
 
     DrawBootScreen();
     for (volatile int d = 0; d < 2000000; d++) { __asm__ __volatile__("nop"); }
@@ -69,20 +71,24 @@ void kernelMain(uint32_t* mbi) {
         HandleWindowMouse(&ShellWin, 0);
         HandleWindowMouse(&NotesWin, 1);
         HandleWindowMouse(&SnakeWin, 2);
+        HandleWindowMouse(&FilesWin, 3);
         HandleTaskbarClick();
 
         UpdateWindowPhysics(&ShellWin);
         UpdateWindowPhysics(&NotesWin);
         UpdateWindowPhysics(&SnakeWin);
+        UpdateWindowPhysics(&FilesWin);
 
         DrawDesktop();
         DrawWindowFrame(&ShellWin);
         DrawWindowFrame(&NotesWin);
         DrawWindowFrame(&SnakeWin);
+        DrawWindowFrame(&FilesWin);
 
         ShellDraw();
         NotesDraw();
         SnakeDraw();
+        FilesDraw();
 
         DrawTaskbar();
         DrawMouseCursor();

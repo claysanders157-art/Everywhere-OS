@@ -70,6 +70,14 @@ void HandleTaskbarClick(void) {
         }
         x += 44;
     }
+    if (FilesWin.visible && FilesWin.minimized) {
+        if (PointInRect(mouse_x, mouse_y, x, SCR_H - 11, 40, 10)) {
+            FilesWin.minimized = 0;
+            active_window = 3;
+            return;
+        }
+        x += 44;
+    }
 }
 
 /*++
@@ -106,6 +114,11 @@ void DrawTaskbar(void) {
     if (SnakeWin.visible && SnakeWin.minimized) {
         FillRect(x, SCR_H - 11, 40, 10, 0x03);
         DrawString(x + 2, SCR_H - 10, "Snake", 0x0F);
+        x += 44;
+    }
+    if (FilesWin.visible && FilesWin.minimized) {
+        FillRect(x, SCR_H - 11, 40, 10, 0x03);
+        DrawString(x + 2, SCR_H - 10, "Files", 0x0F);
         x += 44;
     }
 }

@@ -7,13 +7,15 @@ NASM    = nasm
 CFLAGS  = -c -ffreestanding -fno-builtin -fno-stack-protector -nostdlib \
           -m32 -Wall -Wextra \
           -I./base/ntos/inc \
-          -I./shell/explorer
+          -I./shell/explorer \
+          -I./base/fs/evryfs
 
 LDFLAGS = -m elf_i386 -T kernel.ld
 ASFLAGS = -f elf32
 
 BUILD = build
 ISO   = iso
+DISK_IMG = $(BUILD)/disk.img
 
 ENTRY_SRC = entry.asm
 ENTRY_OBJ = $(BUILD)/entry.o
@@ -26,7 +28,9 @@ NTOS_SRC = base/ntos/ke/io.c \
            base/ntos/ke/keyboard.c \
            base/ntos/ke/window.c
 
-# HAL (base\hals\halx86)
+# File System (base\fs\evryfs)
+FS_SRC = base/fs/evryfs/ata.c \
+         base/fs/evryfs/evryfs.c
 HAL_SRC = base/hals/halx86/halinit.c
 HAL_ASM_SRC = base/hals/halx86/irq12.asm
 HAL_ASM_OBJ = $(BUILD)/base/hals/halx86/irq12.o
@@ -37,12 +41,13 @@ SHELL_SRC = shell/explorer/desktop.c \
             shell/explorer/shell.c \
             shell/explorer/notes.c \
             shell/explorer/snake.c \
-            shell/explorer/input.c
+            shell/explorer/input.c \
+            shell/explorer/files.c
 
 # Main entry
 MAIN_SRC = kernel.c
 
-ALL_C_SRC = $(NTOS_SRC) $(HAL_SRC) $(SHELL_SRC) $(MAIN_SRC)
+ALL_C_SRC = $(NTOS_SRC) $(HAL_SRC) $(FS_SRC) $(SHELL_SRC) $(MAIN_SRC)
 ALL_C_OBJ = $(patsubst %.c,$(BUILD)/%.o,$(ALL_C_SRC))
 
 KERNEL_ELF = $(BUILD)/kernel.elf
@@ -53,6 +58,7 @@ OS_ISO     = $(BUILD)/os.iso
 $(shell mkdir -p $(BUILD))
 $(shell mkdir -p $(BUILD)/base/ntos/ke)
 $(shell mkdir -p $(BUILD)/base/hals/halx86)
+$(shell mkdir -p $(BUILD)/base/fs/evryfs)
 $(shell mkdir -p $(BUILD)/shell/explorer)
 $(shell mkdir -p $(ISO)/boot/grub)
 
@@ -85,8 +91,11 @@ $(ISO)/boot/grub/grub.cfg:
 $(OS_ISO): $(ISO)/boot/kernel.elf $(ISO)/boot/grub/grub.cfg
 	grub-mkrescue -o $@ $(ISO)
 
-run: $(OS_ISO)
-	qemu-system-i386 -cdrom $(OS_ISO) -full-screen
+$(DISK_IMG):
+	qemu-img create -f raw $@ 1M
+
+run: $(OS_ISO) $(DISK_IMG)
+	qemu-system-i386 -cdrom $(OS_ISO) -hda $(DISK_IMG) -full-screen
 
 clean:
 	rm -rf $(BUILD) $(ISO)

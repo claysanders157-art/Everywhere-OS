@@ -26,12 +26,14 @@ Environment:
 #define _EXPLORER_H_
 
 #include "ke.h"
+#include "evryfs.h"
 
 /* ********** Window instances (defined in base/ntos/ke/window.c) ********** */
 
 extern WINDOW ShellWin;
 extern WINDOW NotesWin;
 extern WINDOW SnakeWin;
+extern WINDOW FilesWin;
 
 /* ********** Desktop ********** */
 
@@ -49,6 +51,8 @@ void HandleTaskbarClick(void);
 
 extern char shell_input[];
 extern int  shell_len;
+extern char shell_output[];
+extern int  shell_has_output;
 
 void ShellClear(void);
 void ShellDraw(void);
@@ -62,6 +66,10 @@ extern char notes_buf[];
 extern int  notes_len;
 
 void NotesDraw(void);
+
+/* ********** Files ********** */
+
+void FilesDraw(void);
 
 /* ********** Snake ********** */
 
