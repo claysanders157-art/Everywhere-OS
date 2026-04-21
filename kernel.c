@@ -11,10 +11,10 @@ Abstract:
     Main entry point for the GUI kernel. All subsystems are now split
     into base\ntos\ke\* (kernel) and shell\explorer\* (userspace).
 
-Author:
+Author(s):
 
     Noah Juopperi <nipfswd@gmail.com>
-    Clay Sanders (made the first version of the kernel) <claylikepython@yahoo.com>
+    Clay Sanders <claylikepython@yahoo.com>
 
 Environment:
 
