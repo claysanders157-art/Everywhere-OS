@@ -115,7 +115,7 @@ Return Value:
 --*/
 
 void UpdateWindowPhysics(WINDOW* w) {
-    if (!w->visible || w->minimized || w->fullscreen) return;
+    if (!w->visible || w->minimized || w->fullscreen || w->dragging) return;
 
     w->x += w->vx;
     w->y += w->vy;

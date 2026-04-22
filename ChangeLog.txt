@@ -25,6 +25,10 @@ Fixes
 00025 QEMU opens in a tiny window instead of fullscreen - added -full-screen flag to QEMU launch command in Makefile
 
 
+Fixes
+(window)
+00026 Window dragging is jerky and lags behind mouse - disabled physics updates during drag so window follows cursor directly
+
 Features
 (window)
 00014 Added fullscreen button to window title bar - click to expand window to fill screen, click again to restore original size
