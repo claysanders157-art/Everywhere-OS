@@ -14,7 +14,7 @@ Fixes
 00010 InitMouse leaves stale ACK bytes in PS/2 buffer - added flush loop after initialization
 00011 Multiboot header does not request video mode - added 320x200x8 video mode fields so GRUB sets mode 13h before kernel entry
 00012 Screen flickers every frame - added double buffering with off-screen back buffer and FlipBuffers copy to VGA
-00013 Entier OS is a single kernel.c file - split into multi-module layout
+00013 Entire OS is a single kernel.c file - split into multi-module layout
 (mouse)
 00017 Mouse cursor is a shapeless red triangle that disappears on dark backgrounds - replaced with proper 12x8 arrow cursor with black outline and white fill
 00020 Mouse cursor still too small and poorly shaped for 640x480 - enlarged to 16x16 with classic arrow shape, proper tail split, and full black outline
