@@ -16,5 +16,35 @@ build/
 # privacy
 *.env
 
+# Just to be sure
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Windows
+Thumbs.db
+ehthubs.db
+Desktop.ini
+
+# Linox
+*~
+.directory
+
+# Cmake/make build files (even though we dont use cmake, I though I'd include it anyways)
+*.a
+*.so
+*.dylib
+*.map
+*.out
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+# Makefile <- we wanna keep this  !!
+
+# No no rust
+target/
+# The one below might cause problems with github actions.
+Cargo.lock
+
 # ???
 anthaude.intrusion.md

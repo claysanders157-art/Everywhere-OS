@@ -29,6 +29,11 @@ Fixes
 (window)
 00026 Window dragging is jerky and lags behind mouse - disabled physics updates during drag so window follows cursor directly
 
+(mm)
+00027 No memory manager - kernel has no way to dynamically allocate memory - implemented non-paged pool in base/ntos/mm: MmInit parses the Multiboot v1 memory map to find the largest usable physical region above 2 MB, MmAllocatePool performs first-fit allocation with block splitting, MmFreePool returns blocks with immediate bidirectional coalescing of adjacent free blocks
+00028 Pool corruption would be silent - every block header carries a Magic sentinel (MM_POOL_TAG_ALLOC / MM_POOL_TAG_FREE); MmFreePool spins on magic mismatch to surface double-free and bad-pointer bugs immediately
+
+
 Features
 (window)
 00014 Added fullscreen button to window title bar - click to expand window to fill screen, click again to restore original size
