@@ -58,11 +58,31 @@ ALL_C_OBJ = $(patsubst %.c,$(BUILD)/%.o,$(ALL_C_SRC))
 KERNEL_ELF = $(BUILD)/kernel.elf
 OS_ISO     = $(BUILD)/os.iso
 
-.PHONY: all clean run
+# MM regression test kernel
+#
+# The test binary is a standalone Multiboot ELF that contains only the MM
+# sources and the test suite.  It is loaded directly by QEMU via -kernel
+# (no GRUB or ISO required) and runs entirely headless, writing all output
+# to COM1 which is forwarded to the host terminal via -serial stdio.
+#
+# Build and run: make test
+# The suite prints [ PASS ] / [ FAIL ] per case and a final PASS or FAIL
+# banner.  Non-zero exit from make test indicates at least one failure.
+
+TEST_ENTRY_SRC  = base/ntos/mm/tests/entry.asm
+TEST_ENTRY_OBJ  = $(BUILD)/base/ntos/mm/tests/entry.o
+TEST_MMTEST_SRC = base/ntos/mm/tests/mmtest.c
+TEST_MMTEST_OBJ = $(BUILD)/base/ntos/mm/tests/mmtest.o
+TEST_ELF        = $(BUILD)/mmtest.elf
+
+QEMU_TESTFLAGS  = -display none -serial stdio -m 64M -no-reboot
+
+.PHONY: all clean run test
 
 $(shell mkdir -p $(BUILD))
 $(shell mkdir -p $(BUILD)/base/ntos/ke)
 $(shell mkdir -p $(BUILD)/base/ntos/mm)
+$(shell mkdir -p $(BUILD)/base/ntos/mm/tests)
 $(shell mkdir -p $(BUILD)/base/hals/halx86)
 $(shell mkdir -p $(BUILD)/base/fs/evryfs)
 $(shell mkdir -p $(BUILD)/shell/explorer)
@@ -102,6 +122,21 @@ $(DISK_IMG):
 
 run: $(OS_ISO) $(DISK_IMG)
 	qemu-system-i386 -cdrom $(OS_ISO) -hda $(DISK_IMG) -full-screen
+
+$(TEST_ENTRY_OBJ): $(TEST_ENTRY_SRC)
+	$(NASM) $(ASFLAGS) $< -o $@
+
+$(TEST_MMTEST_OBJ): $(TEST_MMTEST_SRC)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(TEST_ELF): $(TEST_ENTRY_OBJ) \
+             $(BUILD)/base/ntos/mm/mminit.o \
+             $(BUILD)/base/ntos/mm/allocpag.o \
+             $(TEST_MMTEST_OBJ)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+test: $(TEST_ELF)
+	qemu-system-i386 -kernel $< $(QEMU_TESTFLAGS)
 
 clean:
 	rm -rf $(BUILD) $(ISO)

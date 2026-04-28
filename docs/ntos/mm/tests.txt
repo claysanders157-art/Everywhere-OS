@@ -1,0 +1,285 @@
+EverywhereOS Non-Paged Pool Regression Test Suite
+==================================================
+
+Document: docs/ntos/mm/tests.txt
+Subsystem: Memory Manager (Mm)
+Component: Non-paged pool regression tests
+Location: base/ntos/mm/tests/
+
+
+Overview
+--------
+
+The MM regression test suite is a standalone bare-metal kernel binary
+that boots under QEMU, initialises the non-paged pool via the same code
+path the production kernel uses, and exercises MmAllocatePool and
+MmFreePool through twenty test cases covering all observable behaviours
+of the allocator.
+
+The test kernel writes pass/fail results to the COM1 serial port (I/O
+base 0x3F8) at 115200 8N1.  Running 'make test' in the project root
+compiles the test binary and launches QEMU with -nographic and
+-serial stdio so that the output appears directly in the terminal.
+
+The suite is intended to be run on every commit that touches:
+  - base/ntos/mm/allocpag.c
+  - base/ntos/mm/mminit.c
+  - base/ntos/inc/mm.h
+  - base/ntos/mm/mi.h
+
+
+Files
+-----
+
+base/ntos/mm/tests/entry.asm
+
+    Multiboot v1 entry point for the test kernel.  Requests no video
+    mode (flags = 0x1) so QEMU -nographic is safe.  Loads a flat 32-bit
+    GDT, sets up a 16 KB stack in BSS, and calls testMain with the
+    Multiboot information pointer in EBX.
+
+base/ntos/mm/tests/mmtest.c
+
+    The complete test kernel in one translation unit.  Contains:
+
+        - A self-contained COM1 serial driver (MmTestSerialInit,
+          MmTestSerialWriteByte, MmTestSerialWriteString,
+          MmTestSerialWriteHex32, MmTestSerialWriteUint32,
+          MmTestSerialWriteCrLf).  No dependency on ke.h.
+
+        - A minimal test framework (MmTestRun, MmTestPrintSummary)
+          with global pass/fail counters.
+
+        - Twenty test case functions grouped into five sections.
+
+        - testMain: initialises COM1, calls MmInit, runs all cases,
+          prints the summary banner, and halts.
+
+
+Building
+--------
+
+    make test
+
+The test binary (build/mmtest.elf) is built from:
+  - base/ntos/mm/tests/entry.asm
+  - base/ntos/mm/mminit.c   (shared with the production kernel)
+  - base/ntos/mm/allocpag.c (shared with the production kernel)
+  - base/ntos/mm/tests/mmtest.c
+
+The same CFLAGS used for the production kernel apply: -ffreestanding
+-fno-builtin -fno-stack-protector -nostdlib -m32.
+
+The linker script is the same kernel.ld used for the production kernel.
+The Multiboot header at the start of entry.asm guarantees QEMU locates
+the kernel entry point and sets up a Multiboot information structure
+before jumping to 'start'.
+
+
+QEMU invocation
+---------------
+
+The Makefile test target runs:
+
+    qemu-system-i386 -kernel build/mmtest.elf \
+                     -display none -serial stdio -m 64M -no-reboot
+
+-kernel       loads the ELF directly as a Multiboot kernel without
+              requiring a GRUB rescue image.
+
+-display none suppresses the graphical window without claiming stdio
+              for the QEMU monitor (unlike -nographic which does).
+
+-serial stdio redirects COM1 to the host's stdin/stdout.
+
+-m 64M        provisions 64 MB of RAM; MmInit will find a large usable
+              region above 2 MB via the Multiboot memory map.
+
+-no-reboot    prevents QEMU from restarting if the kernel calls HLT.
+
+
+Expected output
+---------------
+
+    EverywhereOS MM Regression Test Suite
+    --------------------------------------
+    Pool base : 0x00200000
+    Pool total: 62914560 bytes (60 MB)
+    Pool free : 62914560 bytes
+
+    [ PASS ]  A1  NullOnZeroBytes
+    [ PASS ]  A2  BasicAllocNonNull
+    [ PASS ]  A3  HeaderMagicOnAlloc
+    [ PASS ]  A4  HeaderPoisonOnAlloc
+    [ PASS ]  A5  TagStoredInHeader
+    [ PASS ]  A6  SizeRounding
+    [ PASS ]  A7  PayloadIsWritable
+    [ PASS ]  B1  FreeDecreasesUsage
+    [ PASS ]  B2  StatsRestoredAfterFree
+    [ PASS ]  B3  BlockSizeAccounting
+    [ PASS ]  C1  NullFreeIsNoOp
+    [ PASS ]  C2  ForwardCoalesce
+    [ PASS ]  C3  BackwardCoalesce
+    [ PASS ]  C4  FullCoalesceRestoresPool
+    [ PASS ]  C5  MultipleAllocsAndFree
+    [ PASS ]  D1  PrevBlockSizeChain
+    [ PASS ]  D2  FreeListSentinelMagic
+    [ PASS ]  D3  SizeVariants
+    [ PASS ]  E1  ExhaustionReturnsNull
+    [ PASS ]  E2  PoolRecoveryAfterExhaust
+
+    Tests run: 20  Passed: 20  Failed: 0
+    PASS
+
+If any line shows [ FAIL ], the corresponding test case function in
+mmtest.c is the starting point for investigation.
+
+
+Test case descriptions
+----------------------
+
+Group A -- Allocation fundamentals
+
+  A1  NullOnZeroBytes
+      MmAllocatePool(0, tag) must return NULL and must not modify
+      MmPoolFreeBytes.
+
+  A2  BasicAllocNonNull
+      MmAllocatePool(16, tag) must return a non-NULL pointer.
+
+  A3  HeaderMagicOnAlloc
+      The MM_POOL_HEADER embedded before the returned payload must have
+      Magic == MM_POOL_TAG_ALLOC (0x414C4C4F) immediately after alloc.
+
+  A4  HeaderPoisonOnAlloc
+      FreeNext and FreePrev in the header must equal MM_POOL_POISON
+      (0xDEADBEEF) after allocation, confirming MiRemoveFreeBlock ran.
+
+  A5  TagStoredInHeader
+      The Tag field in the header must match the tag value passed to
+      MmAllocatePool.
+
+  A6  SizeRounding
+      BlockSize must be a multiple of MM_POOL_GRANULARITY (8) for both
+      a 1-byte and a 9-byte request.
+
+  A7  PayloadIsWritable
+      All 256 bytes of a 256-byte allocation must be writable and
+      read back with the correct pattern (0xA5).
+
+Group B -- Pool statistics
+
+  B1  FreeDecreasesUsage
+      MmPoolFreeBytes must be strictly less after an allocation than
+      before it.
+
+  B2  StatsRestoredAfterFree
+      MmPoolFreeBytes must equal its pre-allocation value after the
+      block is freed.
+
+  B3  BlockSizeAccounting
+      The decrease in MmPoolFreeBytes after an allocation must equal
+      exactly the BlockSize field in the allocated block's header.
+
+Group C -- Free and coalescing
+
+  C1  NullFreeIsNoOp
+      MmFreePool(NULL) must not crash or change MmPoolFreeBytes.
+
+  C2  ForwardCoalesce
+      Allocate A and B (in order), free A then B.  The second free
+      triggers backward coalescing (B merges into A's free block) after
+      forward coalescing (B absorbs the tail free region).  Pool must
+      be fully restored.
+
+  C3  BackwardCoalesce
+      Allocate A and B, free B then A.  The second free triggers
+      forward coalescing (A absorbs the B+tail block).  Pool must
+      be fully restored.
+
+  C4  FullCoalesceRestoresPool
+      Allocate five blocks A-E, free in order C, A, E, B, D.  Every
+      coalesce path (isolated free, forward, backward, combined) is
+      exercised.  Pool must be fully restored.
+
+  C5  MultipleAllocsAndFree
+      Allocate 128 blocks of 32 bytes each, free them all in order.
+      Pool free bytes must match the pre-allocation snapshot.
+
+Group D -- Structural invariants
+
+  D1  PrevBlockSizeChain
+      Walk every physical block from MiPoolBase to MiPoolEnd.  For
+      each block after the first, PrevBlockSize must equal the
+      preceding block's BlockSize.
+
+  D2  FreeListSentinelMagic
+      MiPoolFreeListHead.Magic must equal 0 before and after an
+      alloc/free cycle.  A non-zero value means the sentinel was
+      accidentally treated as a real block.
+
+  D3  SizeVariants
+      Allocate blocks of sizes 1, 7, 8, 9, 63, 64, 1023, and 4096
+      bytes.  Each must succeed, have the correct Magic, have a
+      BlockSize that is a multiple of MM_POOL_GRANULARITY, and have
+      a BlockSize >= header + rounded payload.  Free all eight blocks
+      and verify MmPoolFreeBytes is restored.
+
+Group E -- Exhaustion and recovery
+
+  E1  ExhaustionReturnsNull
+      Allocate 4 KB blocks in a loop until MmAllocatePool returns NULL.
+      The NULL return is required to signal pool exhaustion cleanly
+      rather than returning an invalid pointer.
+
+  E2  PoolRecoveryAfterExhaustion
+      Free every block allocated by E1.  Verify that a fresh 64-byte
+      allocation succeeds and that MmPoolFreeBytes equals MmPoolTotalBytes
+      after freeing it, confirming full coalesce back to a single block.
+
+
+Adding new test cases
+---------------------
+
+1.  Write a static int function named MmTestCase<Descriptive Name>(void)
+    that returns 1 on pass and 0 on fail.  Add a DDK-style comment block
+    above it following the pattern of the existing cases.
+
+2.  Add an entry to the MmTestTable array at the bottom of mmtest.c:
+        { "X<n>  ShortName",  MmTestCaseShortName },
+
+3.  Update MMTEST_CASE_COUNT if it is ever made a compile-time constant
+    (currently computed via sizeof(MmTestTable)/sizeof(MmTestTable[0])).
+
+4.  Add the test case description to this file under the appropriate group,
+    or create a new group if the case covers a new area.
+
+5.  Run 'make test' to verify the new case passes before committing.
+
+
+Pool constants referenced by the test suite
+-------------------------------------------
+
+MM_POOL_TAG_FREE   0x45455246  "FREE" -- magic for a free block
+MM_POOL_TAG_ALLOC  0x414C4C4F  "ALLO" -- magic for an allocated block
+MM_POOL_POISON     0xDEADBEEF  -- written into FreeNext/FreePrev of
+                                   live allocations
+MM_POOL_GRANULARITY         8  -- all block sizes are multiples of this
+MM_POOL_HEADER_SIZE        24  -- sizeof(MM_POOL_HEADER) on 32-bit builds
+MM_POOL_MIN_BLOCK          32  -- MM_POOL_HEADER_SIZE + MM_POOL_GRANULARITY
+
+
+Serial output format
+--------------------
+
+Each test line is terminated with CR-LF (\r\n) for compatibility with
+serial terminal emulators.  Numeric values in diagnostics are printed as
+8-digit uppercase hexadecimal (pool addresses) or decimal (byte counts).
+
+The final two lines of output are always:
+
+    Tests run: <N>  Passed: <P>  Failed: <F>
+    <PASS|FAIL>
+
+Scripts that want a quick binary verdict should look for "^PASS$" or
+"^FAIL$" as the last non-empty line of the captured serial output.

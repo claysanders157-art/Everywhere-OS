@@ -58,5 +58,9 @@ Features
 (shell)
 00033 No way to create files from the shell - added mktest command that writes "Hello, World!\n" to hello.txt on the EVRYFS volume and shows "Created hello.txt" in the shell output line
 00034 No way to open the file browser from the shell - added files command that opens the Files window
+
+Features
+(tests)
+00035 No regression test suite exists -- pool bugs from future commits would go undetected; added base/ntos/mm/tests/ containing a standalone bare-metal test kernel (entry.asm + mmtest.c); 20 test cases across five groups (allocation fundamentals, pool statistics, coalescing, structural invariants, exhaustion/recovery) exercise MmAllocatePool and MmFreePool with MM_POOL_TAG sentinels and report PASS/FAIL over COM1 serial port; runs under QEMU -nographic via 'make test'
 (explorer)
 00035 No file browser window existed - added Files window (shell/explorer/files.c) showing EVRYFS directory listing with filename and size per row; accessible via files shell command or taskbar
