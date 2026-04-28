@@ -26,6 +26,7 @@ Environment:
 #define _KE_H_
 
 #include <stdint.h>
+#include "mm.h"
 
 /* ********** Basic I/O ********** */
 

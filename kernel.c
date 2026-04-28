@@ -45,6 +45,7 @@ Return Value:
 --*/
 
 void kernelMain(uint32_t* mbi) {
+    MmInit(mbi);
     SetupFramebuffer(mbi);
     InitFont();
     InitMouse();
